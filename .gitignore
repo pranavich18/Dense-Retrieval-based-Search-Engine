@@ -3,3 +3,6 @@ ms_marco/
 *.h5
 partial/
 index/
+.DS_Store
+*.txt
+trec_eval/
