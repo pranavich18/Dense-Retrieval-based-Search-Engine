@@ -1,0 +1,5 @@
+ms_marco/
+*.tsv
+*.h5
+partial/
+index/

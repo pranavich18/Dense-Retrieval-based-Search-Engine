@@ -1,0 +1,65 @@
+Top 10 results:
+1. DocID: 422786 (score: 18.9888)
+Snippet: Veterinarians; Services; Know Your Pet. Cat Breeds; Cat Care; Dog Breeds; Dog Care; Contact Us 
+2. DocID: 1807978 (score: 18.4485)
+Snippet: dog skull free dog vector art dog cat free vector dog vector free download vector free dog vector dog free free vector dog free dog vectors dog vector free dog ...
+3. DocID: 2622826 (score: 17.9601)
+Snippet: For help with this decision, consider your kitten options before birthing time. 1 Cat Reproductive Health. 2 Cat FAQs. 3 Living with Cats. 4 Dog Reproductive Health. 5 Horse Health ...
+4. DocID: 6338640 (score: 17.7894)
+Snippet: ... will get an upset stomach â vomiting, diarrhea â from eating cat food, while some other dogs with a tougher stomach can handle cat food,âIf your dog ...
+5. DocID: 7288973 (score: 17.7115)
+Snippet: Dog products. PetSmart owns several brands that produce a variety of products including Grreat Choice (previously Award) which is a line of dog food as well as dog and cat ...
+6. DocID: 6498707 (score: 17.6773)
+Snippet: Gold Dog Pate canned products, Four-Star canned dog foods, Four-Star canned cat foods, or any Fromm dry dog foods, dry cat foods, or dog treats. If you have any questions ...
+7. DocID: 7128034 (score: 17.5611)
+Snippet: Cf. also French chenille caterpillar, literally little dog. A Swiss German name for it is teufelskatz devil's cat. The caterpillar has in many idioms received the name of other animals ...
+8. DocID: 6753609 (score: 17.5527)
+Snippet: If you need dog help, click on my Nationwide List of Stray Dog Removal Experts for a pro near you. Feeding a stray dog or cat might be tempting, particularly ...
+9. DocID: 6854171 (score: 17.5249)
+Snippet: Dog Water Dispenser,Gravity Feeder,Automatic Dog Waterer,Pet Waterer Feeder Set for Cat Dog By Old Tjikko 
+10. DocID: 6338639 (score: 17.5036)
+Snippet: But if your dog does vomit or have diarrhea, make sure the dog canât get [into] the cat food again, because itâs obviously one of those dogs whose GI system ...
+--------------------------------------------------
+Total found: 1652 documents
+Search time: 58.7993 ms
+
+Query> who is the president of the united states
+
+Top 10 results:
+1. DocID: 3055489 (score: 18.9885)
+Snippet: Total outlays in recent budget submissions. 1 2016 United States federal budget â $4.0 trillion (submitted 2015 by President Obama) 2 2015 United States federal budget â $3.9 trillion (submitted ...
+2. DocID: 3969509 (score: 18.499)
+Snippet: Find great deals on eBay for united states plates and united states president plates. Shop with confidence. 
+3. DocID: 7565215 (score: 18.2085)
+Snippet: Vice President, Employee Resource Management, United States Postal Service, 475 LâEnfant Plaza SW, Washington, DC 20260. Vice President, Labor Relations, United States Postal Service, 475 LâEnfant Plaza SW, Washington, DC ...
+4. DocID: 3342866 (score: 17.681)
+Snippet: Example: susan lopez. 1 Susan Lopez United States. 2 Susan Lopez Registered Nurse at Saddleback Memorial Medical Center. United States. 3 Susan Nordstrom Lopez President at Advocate Illinois Masonic Medical ...
+5. DocID: 2311900 (score: 17.2288)
+Snippet: Dan Castagna, Jr. CEO/President at Emergency Care Health & Safety. United States 
+6. DocID: 7097268 (score: 16.7561)
+Snippet: Executive Order 9066. Executive Order 9066 was a United States presidential executive order signed and issued during World War II by United States President Franklin D. Roosevelt on February 19, ...
+7. DocID: 5132883 (score: 16.0077)
+Snippet: ... Jefferson, Theodore Roosevelt, Ronald Reagan, Barack Obama, Franklin D. Roosevelt, George Washington. Any, Broccoli, Eat, Going, Kid, Like, Liked, Little, Little Kid, Made, Me, More, Mother, President, Since, States, United, ...
+8. DocID: 5302063 (score: 15.8065)
+Snippet: ... LinkedInShare on FacebookShare on TwitterShare on Google+. 1 Public Profile Terrence Wright Vice President, Human Resources. Location. 2 Public Profile Terrence Wright Litigation Counsel at NRT (Pennsylvania) Location. United States. ...
+9. DocID: 3630607 (score: 15.7673)
+Snippet: A sitting United States President first threw out a ceremonial first pitch in 1910, a tradition started by William Howard Taft.A look at ceremonial first pitches by presidents in baseball ...
+10. DocID: 5132885 (score: 15.5144)
+Snippet: ... Theodore Roosevelt, Ronald Reagan, Barack Obama, Franklin D. Roosevelt, George Washington. Topics. Any, Broccoli, Eat, Going, Kid, Like, Liked, Little, Little Kid, Made, Me, More, Mother, President, Since, States, United, ...
+--------------------------------------------------
+Total found: 8461277 documents
+Search time: 27911.3 ms
+
+---------------------------
+
+using curl to fetch results from API (./query --server 8080)
+
+Loading index...
+Index loaded successfully.
+(2025-10-18 00:16:34) [INFO    ] Crow/1.2.1 server is running at http://0.0.0.0:8080 using 8 threads
+(2025-10-18 00:16:34) [INFO    ] Call `app.loglevel(crow::LogLevel::Warning)` to hide Info level logs.
+(2025-10-18 00:16:47) [INFO    ] Request: 127.0.0.1:49768 0x103011818 HTTP/1.1 GET /search
+(2025-10-18 00:16:47) [INFO    ] Response: 0x103011818 /search?q=cat+dog&mode=and 200 0
+
+
+{"results":[{"snippet":"Veterinarians; Services; Know Your Pet. 'Cat' Breeds; 'Cat' Care; 'Dog' Breeds; 'Dog' Care; Contact Us ","score":18.988787459000065,"docId":422786},{"docId":1807978,"score":18.448463894292608,"snippet":"'dog' skull free 'dog' vector art 'dog' 'cat' free vector 'dog' vector free download vector free 'dog' vector 'dog' free free vector 'dog' free 'dog' vectors 'dog' vector free 'dog' ..."},{"snippet":"For help with this decision, consider your kitten options before birthing time. 1 'Cat' Reproductive Health. 2 'Cat' FAQs. 3 Living with Cats. 4 'Dog' Reproductive Health. 5 Horse Health ...","score":17.960126757822103,"docId":2622826},{"snippet":"... will get an upset stomach â vomiting, diarrhea â from eating 'cat' food, while some other dogs with a tougher stomach can handle 'cat' food,âIf your 'dog' ...","score":17.789423266535543,"docId":6338640},{"docId":7288973,"score":17.711537041026645,"snippet":"'Dog' products. PetSmart owns several brands that produce a variety of products including Grreat Choice (previously Award) which is a line of 'dog' food as well as 'dog' and 'cat' ..."},{"docId":6498707,"score":17.677256818699082,"snippet":"Gold 'Dog' Pate canned products, Four-Star canned 'dog' foods, Four-Star canned 'cat' foods, or any Fromm dry 'dog' foods, dry 'cat' foods, or 'dog' treats. If you have any questions ..."},{"docId":7128034,"score":17.561083835441178,"snippet":"Cf. also French chenille caterpillar, literally little 'dog.' A Swiss German name for it is teufelskatz devil's 'cat.' The caterpillar has in many idioms received the name of other animals ..."},{"docId":6753609,"score":17.552652429515625,"snippet":"If you need 'dog' help, click on my Nationwide List of Stray 'Dog' Removal Experts for a pro near you. Feeding a stray 'dog' or 'cat' might be tempting, particularly ..."},{"snippet":"'Dog' Water Dispenser,Gravity Feeder,Automatic 'Dog' Waterer,Pet Waterer Feeder Set for 'Cat' 'Dog' By Old Tjikko ","score":17.524929010304582,"docId":6854171},{"snippet":"But if your 'dog' does vomit or have diarrhea, make sure the 'dog' canât get [into] the 'cat' food again, because itâs obviously one of those dogs whose GI system ...","score":17.50357247153611,"docId":6338639}],"search_time":33.644917,"returned_results":10,"total_results":1652,"query":"cat dog"}%             
