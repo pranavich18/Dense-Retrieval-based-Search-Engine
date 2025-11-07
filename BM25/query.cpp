@@ -10,6 +10,9 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <filesystem> // C++17 for path manipulation
+
+namespace fs = std::filesystem;
 
 using namespace std;
 
@@ -217,7 +220,11 @@ int main(int argc, char* argv[]){
     while(getline(q,line)) lines.push_back(line);
     q.close();
 
-    ofstream out("results.txt");
+    // Generate results filename based on input TSV
+    fs::path inputPath(queryFile);
+    string outFileName = inputPath.stem().string() + "_results.txt"; // e.g., queries.eval.tsv -> queries.eval_results.txt
+
+    ofstream out(outFileName);
 
     atomic<size_t> idx(0);
     unsigned T = thread::hardware_concurrency();
@@ -250,5 +257,13 @@ int main(int argc, char* argv[]){
     for(unsigned i=0;i<T;i++) thr.emplace_back(worker);
     for(auto& t:thr) t.join();
 
-    cout<<"Done.\n";
+    cout << "Done. Results written to " << outFileName << "\n";
 }
+
+
+
+
+
+
+
+
