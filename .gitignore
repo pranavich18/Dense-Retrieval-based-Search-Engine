@@ -6,3 +6,4 @@ index/
 .DS_Store
 *.txt
 trec_eval/
+BM25/.DS_Store

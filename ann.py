@@ -30,16 +30,16 @@ faiss.normalize_L2(query_embeddings)
 
 # Build FAISS HNSW index
 dim = passage_embeddings.shape[1]
-M = 32
+M = 16
 index = faiss.IndexHNSWFlat(dim, M)
-index.hnsw.efConstruction = 1000
-index.hnsw.efSearch = 2000
+index.hnsw.efConstruction = 200
+index.hnsw.efSearch = 256
 
 faiss.omp_set_num_threads(faiss.omp_get_max_threads())
 
 index.add(passage_embeddings)
 
-K = 1000  # retrieve more docs per query
+K = 200  # retrieve more docs per query
 run_file = "run_hnsw.txt"
 batch_size = 100  # adjust for RAM limits
 num_batches = (len(query_embeddings) + batch_size - 1) // batch_size
