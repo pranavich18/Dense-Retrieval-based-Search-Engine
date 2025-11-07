@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cctype>
-#include <queue>
 #include <thread>
 #include <mutex>
 #include <atomic>
@@ -18,14 +17,17 @@ const double K1 = 1.2;
 const double B = 0.75;
 const int BLOCK_SIZE = 128;
 
+// ----- GLOBALS -----
 unordered_map<string, tuple<long long,int,int,int>> lexicon;
 vector<int> lastDocIDs, docIDSizes, freqSizes;
 unordered_map<int,int> docLengths;
+unordered_map<int,string> docIdMap;   // internal -> external
 int totalDocuments = 0;
 double avgDocLength = 0.0;
 
 mutex mergeMutex;
 
+// ----- VARBYTE DECODE -----
 int varbyte_decode(const unsigned char* data, int& offset) {
     int num = 0, shift = 0;
     unsigned char byte;
@@ -37,6 +39,7 @@ int varbyte_decode(const unsigned char* data, int& offset) {
     return num;
 }
 
+// ----- TOKENIZE -----
 vector<string> tokenize(const string& s) {
     vector<string> tokens; string tok;
     for(char c : s){
@@ -47,6 +50,7 @@ vector<string> tokenize(const string& s) {
     return tokens;
 }
 
+// ----- INVERTED LIST -----
 class InvertedList {
 private:
     ifstream invFile;
@@ -126,11 +130,13 @@ public:
     void next(){ positionInBlock++; }
 };
 
+// ----- BM25 -----
 double BM25(int tf, int dl, int df){
     double idf = log((totalDocuments - df + 0.5) / (df + 0.5));
     return idf * ((tf*(K1+1)) / (tf + K1*(1-B + B*(dl/avgDocLength))));
 }
 
+// ----- PROCESS QUERY -----
 vector<pair<int,double>> processQuery(const vector<string>& terms){
     static thread_local vector<double> score(totalDocuments,0);
     static thread_local vector<int> touched;
@@ -161,13 +167,16 @@ vector<pair<int,double>> processQuery(const vector<string>& terms){
     return res;
 }
 
+// ----- LOAD INDEX -----
 bool loadIndex(){
+    // Lexicon
     ifstream f("index/lexicon.txt");
     if(!f) return false;
     string t; long long off; int sb,np,df;
     while(f>>t>>off>>sb>>np>>df) lexicon[t]={off,sb,np,df};
     f.close();
 
+    // Metadata
     ifstream m("index/metadata.bin",ios::binary);
     int n; m.read((char*)&n,sizeof(int));
     lastDocIDs.resize(n); docIDSizes.resize(n); freqSizes.resize(n);
@@ -176,17 +185,26 @@ bool loadIndex(){
     m.read((char*)freqSizes.data(),n*4);
     m.close();
 
+    // Document lengths
     ifstream d("index/doc_lengths.txt");
     int id,l;
     while(d>>id>>l){ docLengths[id]=l; avgDocLength+=l; totalDocuments++; }
     avgDocLength/=totalDocuments;
+
+    // Internal -> External ID mapping
+    ifstream mapFile("index/page_table.txt");
+    int internalID; string externalID;
+    while(mapFile >> internalID >> externalID) docIdMap[internalID] = externalID;
+    mapFile.close();
+
     return true;
 }
 
+// ----- MAIN -----
 int main(){
     if(!loadIndex()){ cerr<<"Index load failed\n"; return 1; }
 
-    ifstream q("queries.dev.tsv");
+    ifstream q("queries.eval.tsv");
     vector<string> lines; string line;
     while(getline(q,line)) lines.push_back(line);
     q.close();
@@ -209,8 +227,10 @@ int main(){
             auto res = processQuery(terms);
 
             int rank=1;
-            for(auto& p:res)
-                local.push_back(id+" Q0 "+to_string(p.first)+" "+to_string(rank++)+" "+to_string(p.second)+" bm25");
+            for(auto& p:res){
+                string extID = docIdMap[p.first];   // map internal -> external
+                local.push_back(id + " Q0 " + extID + " " + to_string(rank++) + " " + to_string(p.second) + " bm25");
+            }
         }
 
         lock_guard<mutex> lock(mergeMutex);

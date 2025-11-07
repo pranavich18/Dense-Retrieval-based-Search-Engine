@@ -59,4 +59,12 @@ with open(run_file, "w") as f:
 
 
 
+# trec_eval -m recip_rank.10 -m recall.100 -m ndcg_cut.10  qrels.eval.one.tsv run_hnsw.txt
+# trec_eval -m recip_rank.10 -m recall.100 -m ndcg_cut.10  qrels.eval.two.tsv run_hnsw.txt
+# trec_eval -m ndcg_cut.100  qrels.eval.one.tsv run_hnsw.txt
+# trec_eval -m ndcg_cut.100  qrels.eval.two.tsv run_hnsw.txt
 
+
+
+# trec_eval -m recip_rank.10 -m recall.100 -m ndcg_cut.10  qrels.dev.trec.tsv run_hnsw.txt
+# trec_eval -m ndcg_cut.100  qrels.dev.trec.tsv run_hnsw.txt
