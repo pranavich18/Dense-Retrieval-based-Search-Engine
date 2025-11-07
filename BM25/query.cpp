@@ -200,12 +200,20 @@ bool loadIndex(){
     return true;
 }
 
-// ----- MAIN -----
-int main(){
+int main(int argc, char* argv[]){
+    if(argc != 2){
+        cerr << "Usage: " << argv[0] << " <queries_file.tsv>\n";
+        return 1;
+    }
+
     if(!loadIndex()){ cerr<<"Index load failed\n"; return 1; }
 
-    ifstream q("queries.eval.tsv");
-    vector<string> lines; string line;
+    string queryFile = argv[1];
+    ifstream q(queryFile);
+    if(!q.is_open()){ cerr<<"Cannot open "<<queryFile<<"\n"; return 1; }
+
+    vector<string> lines; 
+    string line;
     while(getline(q,line)) lines.push_back(line);
     q.close();
 
@@ -222,7 +230,9 @@ int main(){
             if(i>=lines.size()) break;
 
             stringstream ss(lines[i]);
-            string id,text; getline(ss,id,'\t'); getline(ss,text);
+            string id,text; 
+            getline(ss,id,'\t'); 
+            getline(ss,text);
             auto terms = tokenize(text);
             auto res = processQuery(terms);
 
