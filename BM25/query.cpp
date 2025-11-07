@@ -374,58 +374,76 @@ bool loadIndex() {
 
 int main() {
     if (!loadIndex()) {
-        cerr << "Error loading index\n";
+        std::cerr << "Error loading index\n";
         return 1;
     }
-    
-    cout << "Search engine ready. Type 'quit' to exit.\n";
-    cout << "Prefix queries with 'AND:' for conjunctive, 'OR:' for disjunctive (default).\n\n";
-    
-    ifstream invFile("index/inverted_index.bin", ios::binary);
+
+    if (std::remove("results.txt") == 0) {
+        std::cout << "Old results.txt deleted.\n";
+    } 
+
+    std::ifstream invFile("index/inverted_index.bin", std::ios::binary);
     if (!invFile.is_open()) {
-        cerr << "Error opening inverted index\n";
+        std::cerr << "Error opening inverted index\n";
         return 1;
     }
-    
-    string line;
-    while (true) {
-        cout << "Query> ";
-        if (!getline(cin, line)) break;
-        
-        line.erase(0, line.find_first_not_of(" \t\n\r"));
-        line.erase(line.find_last_not_of(" \t\n\r") + 1);
-        
-        if (line.empty()) continue;
-        if (line == "quit" || line == "exit") break;
-        
-        bool conjunctive = false;
-        string query = line;
-        
-        if (line.size() >= 4 && line.substr(0, 4) == "AND:") {
-            conjunctive = true;
-            query = line.substr(4);
-        } else if (line.size() >= 3 && line.substr(0, 3) == "OR:") {
-            query = line.substr(3);
-        }
-        
-        vector<string> queryTerms = tokenize(query);
-        if (queryTerms.empty()) continue;
-        
-        vector<pair<int, double>> results;
-        if (conjunctive) {
-            results = processConjunctiveQuery(invFile, queryTerms);
-        } else {
-            results = processDisjunctiveQuery(invFile, queryTerms);
-        }
-        
-        cout << "\nTop 10 results:\n";
-        for (int i = 0; i < min(10, (int)results.size()); i++) {
-            cout << (i + 1) << ". DocID " << results[i].first 
-                 << " (score: " << results[i].second << ")\n";
-        }
-        cout << "Total: " << results.size() << " documents\n\n";
+
+    std::ifstream queryFile("queries.dev.tsv");
+    if (!queryFile.is_open()) {
+        std::cerr << "Error opening queries.dev.tsv\n";
+        return 1;
     }
-    
+
+    std::ofstream resultsFile("results.txt");
+    if (!resultsFile.is_open()) {
+        std::cerr << "Error creating results.txt\n";
+        return 1;
+    }
+
+    std::string line;
+    bool firstLine = true;
+    const int TOP_K_RESULTS = 100; // top 100 BM25 results per query
+    int queryCount = 0;
+
+    while (getline(queryFile, line)) {
+        if (firstLine) { firstLine = false; continue; } // skip header if any
+
+        std::stringstream ss(line);
+        std::string queryIDStr, queryText;
+        if (!getline(ss, queryIDStr, '\t')) continue;
+        if (!getline(ss, queryText)) continue;
+
+        int queryID = std::stoi(queryIDStr);
+        std::vector<std::string> queryTerms = tokenize(queryText);
+        if (queryTerms.empty()) continue;
+
+        // Disjunctive BM25 query
+        std::vector<std::pair<int, double>> results = processDisjunctiveQuery(invFile, queryTerms);
+
+        // Keep only top 100 results
+        if ((int)results.size() > TOP_K_RESULTS) {
+            results.resize(TOP_K_RESULTS);
+        }
+
+        // Write in TREC format
+        for (size_t rank = 0; rank < results.size(); ++rank) {
+            int docID = results[rank].first;
+            double score = results[rank].second;
+            resultsFile << queryID << " Q0 " 
+                        << docID << " " 
+                        << (rank + 1) << " "  // 1-based rank
+                        << score << " "
+                        << "bm25"
+                        << "\n";
+        }
+
+        queryCount++;
+    }
+
     invFile.close();
+    queryFile.close();
+    resultsFile.close();
+
+    std::cout << "Top " << TOP_K_RESULTS << " BM25 results for all the queries written to results.txt\n";
     return 0;
 }
