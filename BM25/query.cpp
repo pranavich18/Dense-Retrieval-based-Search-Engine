@@ -213,13 +213,20 @@ double calculateBM25(int tf, int docLength, int df, int N) {
     return idf * tfComponent;
 }
 
-vector<pair<int, double>> processDisjunctiveQuery(ifstream& invFile, const vector<string>& queryTerms) {
-    const int TOP_K_RESULTS = 100;
-    using DocScore = pair<double, int>;
-    auto cmp = [](const DocScore &a, const DocScore &b){ return a.first > b.first; };
-    priority_queue<DocScore, vector<DocScore>, decltype(cmp)> topHeap(cmp);
+// THREAD-LOCAL SCORES
+static thread_local vector<double> scores;
+static thread_local vector<int> touched;
+static thread_local bool initialized = false;
 
-    unordered_map<int, double> docScores;
+vector<pair<int, double>> processDisjunctiveQueryFast(ifstream& invFile,
+                                                      const vector<string>& queryTerms) {
+    const int TOP_K = 100;
+
+    if (!initialized) {
+        scores.assign(totalDocuments, 0.0);
+        initialized = true;
+    }
+    touched.clear();
 
     for (const auto& term : queryTerms) {
         auto it = lexicon.find(term);
@@ -232,59 +239,59 @@ vector<pair<int, double>> processDisjunctiveQuery(ifstream& invFile, const vecto
         while (list.hasNext()) {
             int docID = list.getDocID();
             int freq = list.getFrequency();
-            int docLen = docLengths.count(docID) ? docLengths[docID] : (int)avgDocLength;
+            int len = docLengths.count(docID) ? docLengths[docID] : (int)avgDocLength;
 
-            double score = calculateBM25(freq, docLen, df, totalDocuments);
-            docScores[docID] += score;
-            double currentScore = docScores[docID];
-
-            if ((int)topHeap.size() < TOP_K_RESULTS) {
-                topHeap.push({currentScore, docID});
-            } else if (currentScore > topHeap.top().first) {
-                topHeap.pop();
-                topHeap.push({currentScore, docID});
-            }
+            if (scores[docID] == 0.0) touched.push_back(docID);
+            scores[docID] += calculateBM25(freq, len, df, totalDocuments);
 
             list.next();
         }
     }
 
+    // Collect & sort only touched docs
     vector<pair<int, double>> results;
-    while (!topHeap.empty()) {
-        results.push_back({topHeap.top().second, topHeap.top().first});
-        topHeap.pop();
-    }
-    reverse(results.begin(), results.end());
+    results.reserve(touched.size());
+    for (int d : touched) results.emplace_back(d, scores[d]);
+
+    // partial_sort to top K
+    if (results.size() > TOP_K)
+        partial_sort(results.begin(), results.begin()+TOP_K, results.end(),
+            [](auto&a, auto&b){ return a.second > b.second; });
+    else
+        sort(results.begin(), results.end(), [](auto&a, auto&b){ return a.second > b.second; });
+
+    // Truncate
+    if (results.size() > TOP_K) results.resize(TOP_K);
+
+    // Reset entries touched
+    for (int d : touched) scores[d] = 0.0;
+
     return results;
 }
 
-// ===== Worker for each query
-void processQueryLine(const string &line, ofstream &resultsFile) {
+
+// ===== Worker =====
+void processQueryLine(const string &line, vector<string> &threadBuffer) {
     stringstream ss(line);
-    string queryIDStr, queryText;
-    if (!getline(ss, queryIDStr, '\t')) return;
-    if (!getline(ss, queryText)) return;
+    string qidStr, text;
+    if (!getline(ss, qidStr, '\t')) return;
+    if (!getline(ss, text)) return;
 
-    int queryID = stoi(queryIDStr);
-    vector<string> queryTerms = tokenize(queryText);
-    if (queryTerms.empty()) return;
+    int qid = stoi(qidStr);
+    vector<string> terms = tokenize(text);
+    if (terms.empty()) return;
 
-    ifstream invFile("index/inverted_index.bin", ios::binary); // each thread opens its own stream
-    if (!invFile.is_open()) return;
+    // thread's own read-only file stream
+    ifstream invFile("index/inverted_index.bin", ios::binary);
 
-    vector<pair<int, double>> results = processDisjunctiveQuery(invFile, queryTerms);
-    invFile.close();
+    auto results = processDisjunctiveQueryFast(invFile, terms);
 
-    // Write results thread-safely
-    lock_guard<mutex> lock(resultsMutex);
     int rank = 1;
-    for (auto &p : results) {
-        resultsFile << queryID << " Q0 " 
-                    << p.first << " " 
-                    << rank++ << " "
-                    << p.second << " bm25\n";
-    }
+    for (auto &p : results)
+        threadBuffer.push_back(to_string(qid) + " Q0 " + to_string(p.first) +
+                               " " + to_string(rank++) + " " + to_string(p.second) + " bm25");
 }
+
 
 // Conjunctive query
 vector<pair<int, double>> processConjunctiveQuery(ifstream& invFile, const vector<string>& queryTerms) {
@@ -442,25 +449,44 @@ int main() {
     }
     queryFile.close();
 
-    // Multi-threading: one thread per CPU core
+    // Thread settings
     unsigned int nThreads = thread::hardware_concurrency();
-    vector<thread> threads;
+    if (nThreads == 0) nThreads = 4;
+
     atomic<size_t> idx(0);
+    vector<thread> threads;
+    vector<string> globalOutput;
+    mutex mergeMutex;
 
     auto worker = [&]() {
+        vector<string> localOut;
+        localOut.reserve(2000);
+
         while (true) {
             size_t i = idx++;
             if (i >= queryLines.size()) break;
-            processQueryLine(queryLines[i], resultsFile);
+            processQueryLine(queryLines[i], localOut);
         }
+
+        lock_guard<mutex> lock(mergeMutex);
+        globalOutput.insert(globalOutput.end(), localOut.begin(), localOut.end());
     };
 
-    for (unsigned int t = 0; t < nThreads; ++t) {
+    // Launch threads
+    for (unsigned int t = 0; t < nThreads; t++)
         threads.emplace_back(worker);
-    }
-    for (auto &th : threads) th.join();
 
-    resultsFile.close();
+    // Wait for them
+    for (auto &th : threads)
+        th.join();
+
+    // Sort output by query-id (QREL required)
+    sort(globalOutput.begin(), globalOutput.end());
+
+    // Write once
+    for (auto &s : globalOutput)
+        resultsFile << s << "\n";
+
     cout << "Top 100 BM25 results for all queries written using " << nThreads << " threads.\n";
     return 0;
 }
