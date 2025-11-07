@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cctype>
+#include <queue>
+#include <thread>
+#include <mutex>
 
 using namespace std;
 
@@ -14,12 +17,15 @@ const double K1 = 1.2;
 const double B = 0.75;
 const int BLOCK_SIZE = 128;
 
-// Global data
 unordered_map<string, tuple<long long, int, int, int>> lexicon;
 vector<int> lastDocIDs, docIDSizes, freqSizes;
 unordered_map<int, int> docLengths;
 int totalDocuments = 0;
 double avgDocLength = 0.0;
+
+// Thread-safe result writing
+mutex resultsMutex;
+
 
 // Varbyte decoding
 int varbyte_decode(const unsigned char* data, int& offset) {
@@ -207,40 +213,77 @@ double calculateBM25(int tf, int docLength, int df, int N) {
     return idf * tfComponent;
 }
 
-// Disjunctive query
 vector<pair<int, double>> processDisjunctiveQuery(ifstream& invFile, const vector<string>& queryTerms) {
+    const int TOP_K_RESULTS = 100;
+    using DocScore = pair<double, int>;
+    auto cmp = [](const DocScore &a, const DocScore &b){ return a.first > b.first; };
+    priority_queue<DocScore, vector<DocScore>, decltype(cmp)> topHeap(cmp);
+
     unordered_map<int, double> docScores;
-    
+
     for (const auto& term : queryTerms) {
         auto it = lexicon.find(term);
         if (it == lexicon.end()) continue;
-        
+
         int df = get<3>(it->second);
         InvertedList list(invFile, term);
-        
         list.nextGEQ(0);
+
         while (list.hasNext()) {
             int docID = list.getDocID();
             int freq = list.getFrequency();
             int docLen = docLengths.count(docID) ? docLengths[docID] : (int)avgDocLength;
-            
+
             double score = calculateBM25(freq, docLen, df, totalDocuments);
             docScores[docID] += score;
-            
+            double currentScore = docScores[docID];
+
+            if ((int)topHeap.size() < TOP_K_RESULTS) {
+                topHeap.push({currentScore, docID});
+            } else if (currentScore > topHeap.top().first) {
+                topHeap.pop();
+                topHeap.push({currentScore, docID});
+            }
+
             list.next();
         }
     }
-    
+
     vector<pair<int, double>> results;
-    for (const auto& pair : docScores) {
-        results.push_back({pair.first, pair.second});
+    while (!topHeap.empty()) {
+        results.push_back({topHeap.top().second, topHeap.top().first});
+        topHeap.pop();
     }
-    
-    sort(results.begin(), results.end(), [](const auto& a, const auto& b) {
-        return a.second > b.second;
-    });
-    
+    reverse(results.begin(), results.end());
     return results;
+}
+
+// ===== Worker for each query
+void processQueryLine(const string &line, ofstream &resultsFile) {
+    stringstream ss(line);
+    string queryIDStr, queryText;
+    if (!getline(ss, queryIDStr, '\t')) return;
+    if (!getline(ss, queryText)) return;
+
+    int queryID = stoi(queryIDStr);
+    vector<string> queryTerms = tokenize(queryText);
+    if (queryTerms.empty()) return;
+
+    ifstream invFile("index/inverted_index.bin", ios::binary); // each thread opens its own stream
+    if (!invFile.is_open()) return;
+
+    vector<pair<int, double>> results = processDisjunctiveQuery(invFile, queryTerms);
+    invFile.close();
+
+    // Write results thread-safely
+    lock_guard<mutex> lock(resultsMutex);
+    int rank = 1;
+    for (auto &p : results) {
+        resultsFile << queryID << " Q0 " 
+                    << p.first << " " 
+                    << rank++ << " "
+                    << p.second << " bm25\n";
+    }
 }
 
 // Conjunctive query
@@ -374,76 +417,50 @@ bool loadIndex() {
 
 int main() {
     if (!loadIndex()) {
-        std::cerr << "Error loading index\n";
+        cerr << "Error loading index\n";
         return 1;
     }
 
-    if (std::remove("results.txt") == 0) {
-        std::cout << "Old results.txt deleted.\n";
-    } 
-
-    std::ifstream invFile("index/inverted_index.bin", std::ios::binary);
-    if (!invFile.is_open()) {
-        std::cerr << "Error opening inverted index\n";
-        return 1;
-    }
-
-    std::ifstream queryFile("queries.dev.tsv");
+    ifstream queryFile("queries.dev.tsv");
     if (!queryFile.is_open()) {
-        std::cerr << "Error opening queries.dev.tsv\n";
+        cerr << "Error opening queries.dev.tsv\n";
         return 1;
     }
 
-    std::ofstream resultsFile("results.txt");
+    ofstream resultsFile("results.txt");
     if (!resultsFile.is_open()) {
-        std::cerr << "Error creating results.txt\n";
+        cerr << "Error creating results.txt\n";
         return 1;
     }
 
-    std::string line;
+    vector<string> queryLines;
+    string line;
     bool firstLine = true;
-    const int TOP_K_RESULTS = 100; // top 100 BM25 results per query
-    int queryCount = 0;
-
     while (getline(queryFile, line)) {
-        if (firstLine) { firstLine = false; continue; } // skip header if any
-
-        std::stringstream ss(line);
-        std::string queryIDStr, queryText;
-        if (!getline(ss, queryIDStr, '\t')) continue;
-        if (!getline(ss, queryText)) continue;
-
-        int queryID = std::stoi(queryIDStr);
-        std::vector<std::string> queryTerms = tokenize(queryText);
-        if (queryTerms.empty()) continue;
-
-        // Disjunctive BM25 query
-        std::vector<std::pair<int, double>> results = processDisjunctiveQuery(invFile, queryTerms);
-
-        // Keep only top 100 results
-        if ((int)results.size() > TOP_K_RESULTS) {
-            results.resize(TOP_K_RESULTS);
-        }
-
-        // Write in TREC format
-        for (size_t rank = 0; rank < results.size(); ++rank) {
-            int docID = results[rank].first;
-            double score = results[rank].second;
-            resultsFile << queryID << " Q0 " 
-                        << docID << " " 
-                        << (rank + 1) << " "  // 1-based rank
-                        << score << " "
-                        << "bm25"
-                        << "\n";
-        }
-
-        queryCount++;
+        if (firstLine) { firstLine = false; continue; } // skip header
+        queryLines.push_back(line);
     }
-
-    invFile.close();
     queryFile.close();
-    resultsFile.close();
 
-    std::cout << "Top " << TOP_K_RESULTS << " BM25 results for all the queries written to results.txt\n";
+    // Multi-threading: one thread per CPU core
+    unsigned int nThreads = thread::hardware_concurrency();
+    vector<thread> threads;
+    atomic<size_t> idx(0);
+
+    auto worker = [&]() {
+        while (true) {
+            size_t i = idx++;
+            if (i >= queryLines.size()) break;
+            processQueryLine(queryLines[i], resultsFile);
+        }
+    };
+
+    for (unsigned int t = 0; t < nThreads; ++t) {
+        threads.emplace_back(worker);
+    }
+    for (auto &th : threads) th.join();
+
+    resultsFile.close();
+    cout << "Top 100 BM25 results for all queries written using " << nThreads << " threads.\n";
     return 0;
 }

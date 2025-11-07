@@ -30,10 +30,10 @@ faiss.normalize_L2(query_embeddings)
 
 # Build FAISS HNSW index
 dim = passage_embeddings.shape[1]
-M = 16
+M = 32
 index = faiss.IndexHNSWFlat(dim, M)
-index.hnsw.efConstruction = 400
-index.hnsw.efSearch = 400
+index.hnsw.efConstruction = 1000
+index.hnsw.efSearch = 2000
 
 faiss.omp_set_num_threads(faiss.omp_get_max_threads())
 
