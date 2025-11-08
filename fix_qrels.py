@@ -1,6 +1,6 @@
 # fix_qrels.py
-input_file = "qrels.dev.tsv"
-output_file = "qrels.dev.trec.tsv"
+input_file = "ms_marco/qrels.dev.tsv"
+output_file = "ms_marco/qrels.dev.trec.tsv"
 
 with open(input_file, "r") as f_in, open(output_file, "w") as f_out:
     for line in f_in:

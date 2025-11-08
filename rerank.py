@@ -6,11 +6,11 @@ from tqdm import tqdm
 # -----------------------------
 # Hardcoded paths & parameters
 # -----------------------------
-BM25_FILES = ["BM25/queries.dev_results.txt", "BM25/queries.eval_results.txt"]
+BM25_FILES = ["queries.dev_results.txt", "queries.eval_results.txt"]
 PASSAGE_H5 = "ms_marco/msmarco_passages_embeddings_subset.h5"
 QUERY_H5 = "ms_marco/msmarco_queries_dev_eval_embeddings.h5"
-TOP_K_BM25 = 100   # number of BM25 candidates to consider per query
-TOP_K_FINAL = 100  # number of final reranked results per query
+TOP_K_BM25 = 1000   # number of BM25 candidates to consider per query
+TOP_K_FINAL = 1000  # number of final reranked results per query (changed to improve recall)
 
 # -----------------------------
 # Load embeddings

@@ -166,7 +166,7 @@ vector<pair<int,double>> processQuery(const vector<string>& terms){
     for(auto& p : res) score[p.first] = 0;
 
     sort(res.begin(), res.end(), [](auto&a, auto&b){return a.second>b.second;});
-    if(res.size() > 100) res.resize(100);
+    if(res.size() > 1000) res.resize(1000);
     return res;
 }
 
